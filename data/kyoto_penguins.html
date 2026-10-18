@@ -1,0 +1,349 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 750px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "fujimoto", "label": "fujimoto", "name": "Fujimoto", "new_hire": 0.0, "pool": NaN, "sex": "M", "shape": "dot", "size": 10, "species": "human", "stub": false}, {"band_1": "red", "band_2": NaN, "color": "#97c2fc", "id": "ebisu", "label": "ebisu", "name": "Ebisu", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "purple", "band_2": "clear", "color": "#97c2fc", "id": "shinmachi", "label": "shinmachi", "name": "Shinmachi", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "grey", "band_2": "yellow", "color": "#97c2fc", "id": "tamba", "label": "tamba", "name": "Tamba", "new_hire": NaN, "pool": "lover", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "grey", "band_2": "pink", "color": "#97c2fc", "id": "saya", "label": "saya", "name": "Saya", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "dark_blue", "band_2": NaN, "color": "#97c2fc", "id": "kuruma", "label": "kuruma", "name": "Kuruma", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "ex_kuruma", "label": "ex_kuruma", "name": NaN, "new_hire": NaN, "pool": NaN, "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": true}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "kuwada", "label": "kuwada", "name": "Kuwada", "new_hire": 1.0, "pool": NaN, "sex": "M", "shape": "dot", "size": 10, "species": "human", "stub": false}, {"band_1": "yellow", "band_2": "light_green", "color": "#97c2fc", "id": "kujou", "label": "kujou", "name": "Kujou", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "orange", "band_2": "dark_green", "color": "#97c2fc", "id": "shijou", "label": "shijou", "name": "Shijou", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "uera", "label": "uera", "name": "Uera", "new_hire": 0.0, "pool": NaN, "sex": "F", "shape": "dot", "size": 10, "species": "human", "stub": false}, {"band_1": "grey", "band_2": "purple", "color": "#97c2fc", "id": "sai", "label": "sai", "name": "Sai", "new_hire": NaN, "pool": "lover", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "orange", "band_2": "purple", "color": "#97c2fc", "id": "ane", "label": "ane", "name": "An\u00e8", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "ex_tera", "label": "ex_tera", "name": NaN, "new_hire": NaN, "pool": NaN, "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": true}, {"band_1": "purple", "band_2": "purple", "color": "#97c2fc", "id": "tera", "label": "tera", "name": "Tera", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "koto", "label": "koto", "name": "Dr. Koto", "new_hire": 0.0, "pool": NaN, "sex": "M", "shape": "dot", "size": 10, "species": "human", "stub": false}, {"band_1": "black", "band_2": "dark_blue", "color": "#97c2fc", "id": "yoshiya", "label": "yoshiya", "name": "Yoshiya", "new_hire": NaN, "pool": "hater", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "orange", "band_2": "orange", "color": "#97c2fc", "id": "maru", "label": "maru", "name": "Maru", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "yoshimura", "label": "yoshimura", "name": "Dr. Yoshimura", "new_hire": 0.0, "pool": NaN, "sex": "M", "shape": "dot", "size": 10, "species": "human", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "ohkouchi", "label": "ohkouchi", "name": "Ohkouchi", "new_hire": 0.0, "pool": NaN, "sex": "F", "shape": "dot", "size": 10, "species": "human", "stub": false}, {"band_1": "brown", "band_2": "orange", "color": "#97c2fc", "id": "ohmiya", "label": "ohmiya", "name": "Ohmiya", "new_hire": NaN, "pool": "lover", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "white", "band_2": "pink", "color": "#97c2fc", "id": "ino", "label": "ino", "name": "Ino", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "black", "band_2": "clear", "color": "#97c2fc", "id": "sen", "label": "sen", "name": "Sen", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "light_green", "band_2": "purple", "color": "#97c2fc", "id": "shichijou", "label": "shichijou", "name": "Shichijou", "new_hire": NaN, "pool": "lover", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "grey", "band_2": "red", "color": "#97c2fc", "id": "mibu", "label": "mibu", "name": "Mibu", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "ito", "label": "ito", "name": "Ito", "new_hire": 0.0, "pool": NaN, "sex": "F", "shape": "dot", "size": 10, "species": "human", "stub": false}, {"band_1": "grey", "band_2": "dark_green", "color": "#97c2fc", "id": "ushiwaka", "label": "ushiwaka", "name": "Ushiwaka", "new_hire": NaN, "pool": "lover", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "grey", "band_2": "light_blue", "color": "#97c2fc", "id": "rei", "label": "rei", "name": "Rei", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "sakane", "label": "sakane", "name": "Sakane", "new_hire": 1.0, "pool": NaN, "sex": "F", "shape": "dot", "size": 10, "species": "human", "stub": false}, {"band_1": "black", "band_2": NaN, "color": "#97c2fc", "id": "chie", "label": "chie", "name": "Chi\u00e8", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "toriyama", "label": "toriyama", "name": "Dr. Toriyama", "new_hire": 0.0, "pool": NaN, "sex": "F", "shape": "dot", "size": 10, "species": "human", "stub": false}, {"band_1": "orange", "band_2": NaN, "color": "#97c2fc", "id": "rokkaku", "label": "rokkaku", "name": "Rokkaku", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "yellow", "band_2": "orange", "color": "#97c2fc", "id": "yanagi", "label": "yanagi", "name": "Yanagi", "new_hire": NaN, "pool": "hater", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "yellow", "band_2": "light_blue", "color": "#97c2fc", "id": "bukkou", "label": "bukkou", "name": "Bukkou", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "light_blue", "band_2": "dark_green", "color": "#97c2fc", "id": "hachi", "label": "hachi", "name": "Hachi", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "onochi", "label": "onochi", "name": "Onochi", "new_hire": 0.0, "pool": NaN, "sex": "F", "shape": "dot", "size": 10, "species": "human", "stub": false}, {"band_1": "red", "band_2": "yellow", "color": "#97c2fc", "id": "abura", "label": "abura", "name": "Abura", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "tanabe", "label": "tanabe", "name": "Tanabe", "new_hire": 0.0, "pool": NaN, "sex": "F", "shape": "dot", "size": 10, "species": "human", "stub": false}, {"band_1": "yellow", "band_2": "dark_blue", "color": "#97c2fc", "id": "jujou", "label": "jujou", "name": "Jujou", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "yellow", "band_2": "dark_green", "color": "#97c2fc", "id": "kamanza", "label": "kamanza", "name": "Kamanza", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "pink", "band_2": "pink", "color": "#97c2fc", "id": "takatsuji", "label": "takatsuji", "name": "Takatsuji", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "white", "band_2": "clear", "color": "#97c2fc", "id": "joufuku", "label": "joufuku", "name": "Joufuku", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "light_blue", "band_2": NaN, "color": "#97c2fc", "id": "oike", "label": "oike", "name": "Oik\u00e8", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "light_green", "band_2": "light_blue", "color": "#97c2fc", "id": "osshi", "label": "osshi", "name": "Osshi", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "grey", "band_2": "dark_blue", "color": "#97c2fc", "id": "pon", "label": "pon", "name": "Pon", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "pink", "band_2": "clear", "color": "#97c2fc", "id": "muro", "label": "muro", "name": "Muro", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "grey", "band_2": "orange", "color": "#97c2fc", "id": "sakura", "label": "sakura", "name": "Sakura", "new_hire": NaN, "pool": "lover", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "black", "band_2": "grey", "color": "#97c2fc", "id": "moto", "label": "moto", "name": "Moto", "new_hire": NaN, "pool": "hater", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "pink", "band_2": "light_green", "color": "#97c2fc", "id": "nishi", "label": "nishi", "name": "Nishi", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "ex_nishi", "label": "ex_nishi", "name": NaN, "new_hire": NaN, "pool": NaN, "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": true}, {"band_1": "red", "band_2": "light_green", "color": "#97c2fc", "id": "kagura", "label": "kagura", "name": "Kagura", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "grey", "band_2": "light_green", "color": "#97c2fc", "id": "yasaka", "label": "yasaka", "name": "Yasaka", "new_hire": NaN, "pool": "lover", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "dark_green", "band_2": NaN, "color": "#97c2fc", "id": "tako", "label": "tako", "name": "Tako", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "yellow", "band_2": "pink", "color": "#97c2fc", "id": "man", "label": "man", "name": "Man", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "ex_man", "label": "ex_man", "name": NaN, "new_hire": NaN, "pool": NaN, "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": true}, {"band_1": "purple", "band_2": "dark_green", "color": "#97c2fc", "id": "chara", "label": "chara", "name": "Chara", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "white", "band_2": "orange", "color": "#97c2fc", "id": "hana", "label": "hana", "name": "Hana", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "yellow", "band_2": "purple", "color": "#97c2fc", "id": "matsu", "label": "matsu", "name": "Matsu", "new_hire": NaN, "pool": "hater", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "light_green", "band_2": "dark_green", "color": "#97c2fc", "id": "take", "label": "take", "name": "Tak\u00e8", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "ex_shichijou", "label": "ex_shichijou", "name": NaN, "new_hire": NaN, "pool": NaN, "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": true}, {"band_1": "white", "band_2": "yellow", "color": "#97c2fc", "id": "naka", "label": "naka", "name": "Naka", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "orange", "band_2": "clear", "color": "#97c2fc", "id": "koromo", "label": "koromo", "name": "Koromo", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": "dark_blue", "band_2": "purple", "color": "#97c2fc", "id": "takakura", "label": "takakura", "name": "Takakura", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "ex_tako", "label": "ex_tako", "name": NaN, "new_hire": NaN, "pool": NaN, "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": true}, {"band_1": "black", "band_2": "black", "color": "#97c2fc", "id": "mari", "label": "mari", "name": "Mari", "new_hire": NaN, "pool": "neutral", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "ex_rokkaku", "label": "ex_rokkaku", "name": NaN, "new_hire": NaN, "pool": NaN, "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": true}, {"band_1": "yellow", "band_2": "yellow", "color": "#97c2fc", "id": "ryo", "label": "ryo", "name": "Ryo", "new_hire": NaN, "pool": "neutral", "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": false}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "ex_ryo", "label": "ex_ryo", "name": NaN, "new_hire": NaN, "pool": NaN, "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": true}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "ex_takakura", "label": "ex_takakura", "name": NaN, "new_hire": NaN, "pool": NaN, "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": true}, {"band_1": NaN, "band_2": NaN, "color": "#97c2fc", "id": "ex_koromo", "label": "ex_koromo", "name": NaN, "new_hire": NaN, "pool": NaN, "sex": "M", "shape": "dot", "size": 10, "species": "penguin", "stub": true}, {"band_1": "red", "band_2": "dark_green", "color": "#97c2fc", "id": "ume", "label": "ume", "name": "Um\u00e8", "new_hire": NaN, "pool": "hater", "sex": "F", "shape": "dot", "size": 10, "species": "penguin", "stub": false}]);
+                  edges = new vis.DataSet([{"from": "fujimoto", "to": "ebisu", "type": "love", "width": 1}, {"from": "fujimoto", "to": "shinmachi", "type": "love", "width": 1}, {"from": "fujimoto", "to": "tamba", "type": "enemy", "width": 1}, {"from": "ebisu", "to": "saya", "type": "friend", "width": 1}, {"from": "ebisu", "to": "kuruma", "type": "parent", "width": 1}, {"from": "ebisu", "to": "ex_kuruma", "type": "parent", "width": 1}, {"from": "shinmachi", "to": "kuwada", "type": "friend", "width": 1}, {"from": "shinmachi", "to": "kujou", "type": "enemy", "width": 1}, {"from": "shinmachi", "to": "shijou", "type": "sibling", "width": 1}, {"from": "shinmachi", "to": "uera", "type": "friend", "width": 1}, {"from": "shinmachi", "to": "sai", "type": "friend", "width": 1}, {"from": "tamba", "to": "ane", "type": "friend", "width": 1}, {"from": "tamba", "to": "ex_tera", "type": "parent", "width": 1}, {"from": "tamba", "to": "tera", "type": "parent", "width": 1}, {"from": "tamba", "to": "koto", "type": "enemy", "width": 1}, {"from": "tamba", "to": "yoshiya", "type": "sibling", "width": 1}, {"from": "maru", "to": "yoshimura", "type": "friend", "width": 1}, {"from": "maru", "to": "ohkouchi", "type": "enemy", "width": 1}, {"from": "maru", "to": "ohmiya", "type": "enemy", "width": 1}, {"from": "maru", "to": "ino", "type": "romantic_interest", "width": 1}, {"from": "maru", "to": "sen", "type": "enemy", "width": 1}, {"from": "maru", "to": "shichijou", "type": "ex", "width": 1}, {"from": "maru", "to": "mibu", "type": "parent", "width": 1}, {"from": "maru", "to": "uera", "type": "enemy", "width": 1}, {"from": "maru", "to": "ito", "type": "friend", "width": 1}, {"from": "yoshimura", "to": "ohkouchi", "type": "friend", "width": 1}, {"from": "ohkouchi", "to": "ushiwaka", "type": "friend", "width": 1}, {"from": "ohkouchi", "to": "rei", "type": "friend", "width": 1}, {"from": "ushiwaka", "to": "kuwada", "type": "friend", "width": 1}, {"from": "ushiwaka", "to": "sakane", "type": "friend", "width": 1}, {"from": "ushiwaka", "to": "shijou", "type": "parent", "width": 1}, {"from": "ushiwaka", "to": "chie", "type": "parent", "width": 1}, {"from": "ushiwaka", "to": "toriyama", "type": "friend", "width": 1}, {"from": "ushiwaka", "to": "rokkaku", "type": "romantic_interest", "width": 1}, {"from": "rei", "to": "yanagi", "type": "spouse", "width": 1}, {"from": "rei", "to": "bukkou", "type": "parent", "width": 1}, {"from": "rei", "to": "ohmiya", "type": "ex", "width": 1}, {"from": "rei", "to": "sai", "type": "sibling", "width": 1}, {"from": "rei", "to": "hachi", "type": "parent", "width": 1}, {"from": "kuwada", "to": "onochi", "type": "friend", "width": 1}, {"from": "kuwada", "to": "uera", "type": "friend", "width": 1}, {"from": "kuwada", "to": "sakane", "type": "friend", "width": 1}, {"from": "onochi", "to": "sakane", "type": "friend", "width": 1}, {"from": "onochi", "to": "abura", "type": "friend", "width": 1}, {"from": "uera", "to": "sakane", "type": "friend", "width": 1}, {"from": "uera", "to": "tanabe", "type": "friend", "width": 1}, {"from": "uera", "to": "abura", "type": "friend", "width": 1}, {"from": "sakane", "to": "tanabe", "type": "friend", "width": 1}, {"from": "sakane", "to": "sai", "type": "friend", "width": 1}, {"from": "kujou", "to": "jujou", "type": "spouse", "width": 1}, {"from": "kujou", "to": "hachi", "type": "parent", "width": 1}, {"from": "kujou", "to": "chie", "type": "parent", "width": 1}, {"from": "kujou", "to": "kamanza", "type": "sibling", "width": 1}, {"from": "jujou", "to": "takatsuji", "type": "sibling", "width": 1}, {"from": "jujou", "to": "joufuku", "type": "enemy", "width": 1}, {"from": "jujou", "to": "chie", "type": "parent", "width": 1}, {"from": "jujou", "to": "hachi", "type": "parent", "width": 1}, {"from": "hachi", "to": "oike", "type": "friend", "width": 1}, {"from": "hachi", "to": "chie", "type": "sibling", "width": 1}, {"from": "hachi", "to": "bukkou", "type": "ex", "width": 1}, {"from": "hachi", "to": "osshi", "type": "spouse", "width": 1}, {"from": "hachi", "to": "saya", "type": "parent", "width": 1}, {"from": "hachi", "to": "pon", "type": "parent", "width": 1}, {"from": "hachi", "to": "sai", "type": "parent", "width": 1}, {"from": "chie", "to": "ohmiya", "type": "ex", "width": 1}, {"from": "chie", "to": "shijou", "type": "spouse", "width": 1}, {"from": "chie", "to": "ane", "type": "enemy", "width": 1}, {"from": "kamanza", "to": "saya", "type": "spouse", "width": 1}, {"from": "kamanza", "to": "rokkaku", "type": "enemy", "width": 1}, {"from": "takatsuji", "to": "muro", "type": "romantic_interest", "width": 1}, {"from": "takatsuji", "to": "sakura", "type": "parent", "width": 1}, {"from": "takatsuji", "to": "moto", "type": "parent", "width": 1}, {"from": "joufuku", "to": "nishi", "type": "parent", "width": 1}, {"from": "joufuku", "to": "ex_nishi", "type": "parent", "width": 1}, {"from": "joufuku", "to": "kagura", "type": "sibling", "width": 1}, {"from": "joufuku", "to": "tera", "type": "ex", "width": 1}, {"from": "joufuku", "to": "yasaka", "type": "spouse", "width": 1}, {"from": "muro", "to": "ohmiya", "type": "ex", "width": 1}, {"from": "muro", "to": "sakura", "type": "parent", "width": 1}, {"from": "muro", "to": "moto", "type": "friend", "width": 1}, {"from": "muro", "to": "yanagi", "type": "sibling", "width": 1}, {"from": "sakura", "to": "moto", "type": "sibling", "width": 1}, {"from": "moto", "to": "pon", "type": "enemy", "width": 1}, {"from": "moto", "to": "tako", "type": "ex", "width": 1}, {"from": "moto", "to": "tera", "type": "friend", "width": 1}, {"from": "ohmiya", "to": "man", "type": "parent", "width": 1}, {"from": "ohmiya", "to": "ex_man", "type": "parent", "width": 1}, {"from": "ohmiya", "to": "chara", "type": "sibling", "width": 1}, {"from": "ohmiya", "to": "hana", "type": "sibling", "width": 1}, {"from": "ohmiya", "to": "shichijou", "type": "romantic_interest", "width": 1}, {"from": "matsu", "to": "oike", "type": "spouse", "width": 1}, {"from": "matsu", "to": "man", "type": "ex", "width": 1}, {"from": "oike", "to": "shichijou", "type": "ex", "width": 1}, {"from": "shichijou", "to": "take", "type": "sibling", "width": 1}, {"from": "shichijou", "to": "ex_shichijou", "type": "ex", "width": 1}, {"from": "shichijou", "to": "yasaka", "type": "parent", "width": 1}, {"from": "shichijou", "to": "mibu", "type": "parent", "width": 1}, {"from": "man", "to": "ex_man", "type": "ex", "width": 1}, {"from": "man", "to": "chara", "type": "parent", "width": 1}, {"from": "man", "to": "hana", "type": "parent", "width": 1}, {"from": "ex_man", "to": "hana", "type": "parent", "width": 1}, {"from": "ex_man", "to": "chara", "type": "parent", "width": 1}, {"from": "chara", "to": "hana", "type": "sibling", "width": 1}, {"from": "chara", "to": "yoshiya", "type": "spouse", "width": 1}, {"from": "hana", "to": "naka", "type": "spouse", "width": 1}, {"from": "hana", "to": "koromo", "type": "enemy", "width": 1}, {"from": "hana", "to": "takakura", "type": "enemy", "width": 1}, {"from": "pon", "to": "toriyama", "type": "enemy", "width": 1}, {"from": "pon", "to": "osshi", "type": "parent", "width": 1}, {"from": "pon", "to": "saya", "type": "sibling", "width": 1}, {"from": "pon", "to": "tanabe", "type": "friend", "width": 1}, {"from": "pon", "to": "tako", "type": "romantic_interest", "width": 1}, {"from": "pon", "to": "kuruma", "type": "romantic_interest", "width": 1}, {"from": "tako", "to": "kuruma", "type": "sibling", "width": 1}, {"from": "tako", "to": "ex_tako", "type": "ex", "width": 1}, {"from": "tako", "to": "tera", "type": "parent", "width": 1}, {"from": "tera", "to": "ex_tako", "type": "parent", "width": 1}, {"from": "tera", "to": "ex_tera", "type": "ex", "width": 1}, {"from": "tera", "to": "yoshiya", "type": "parent", "width": 1}, {"from": "tanabe", "to": "ino", "type": "friend", "width": 1}, {"from": "tanabe", "to": "abura", "type": "friend", "width": 1}, {"from": "sai", "to": "bukkou", "type": "parent", "width": 1}, {"from": "sai", "to": "koto", "type": "friend", "width": 1}, {"from": "shijou", "to": "ane", "type": "ex", "width": 1}, {"from": "ane", "to": "mari", "type": "enemy", "width": 1}, {"from": "ane", "to": "rokkaku", "type": "parent", "width": 1}, {"from": "ane", "to": "ex_rokkaku", "type": "parent", "width": 1}, {"from": "rokkaku", "to": "ex_rokkaku", "type": "ex", "width": 1}, {"from": "bukkou", "to": "ryo", "type": "friend", "width": 1}, {"from": "bukkou", "to": "osshi", "type": "enemy", "width": 1}, {"from": "ryo", "to": "ex_ryo", "type": "ex", "width": 1}, {"from": "ryo", "to": "ino", "type": "parent", "width": 1}, {"from": "osshi", "to": "saya", "type": "parent", "width": 1}, {"from": "osshi", "to": "naka", "type": "sibling", "width": 1}, {"from": "naka", "to": "mari", "type": "romantic_interest", "width": 1}, {"from": "naka", "to": "koromo", "type": "ex", "width": 1}, {"from": "mari", "to": "takakura", "type": "parent", "width": 1}, {"from": "mari", "to": "ex_takakura", "type": "parent", "width": 1}, {"from": "mari", "to": "sen", "type": "sibling", "width": 1}, {"from": "koromo", "to": "ex_koromo", "type": "ex", "width": 1}, {"from": "koromo", "to": "abura", "type": "parent", "width": 1}, {"from": "yoshiya", "to": "ex_tera", "type": "parent", "width": 1}, {"from": "takakura", "to": "ino", "type": "spouse", "width": 1}, {"from": "takakura", "to": "ex_takakura", "type": "ex", "width": 1}, {"from": "takakura", "to": "sen", "type": "parent", "width": 1}, {"from": "ex_ryo", "to": "ino", "type": "parent", "width": 1}, {"from": "ex_takakura", "to": "sen", "type": "parent", "width": 1}, {"from": "sen", "to": "mibu", "type": "spouse", "width": 1}, {"from": "koto", "to": "ito", "type": "friend", "width": 1}, {"from": "kuruma", "to": "ex_kuruma", "type": "ex", "width": 1}, {"from": "kuruma", "to": "take", "type": "ex", "width": 1}, {"from": "kuruma", "to": "ume", "type": "friend", "width": 1}, {"from": "take", "to": "ume", "type": "spouse", "width": 1}, {"from": "ex_koromo", "to": "abura", "type": "parent", "width": 1}, {"from": "abura", "to": "ito", "type": "friend", "width": 1}, {"from": "mibu", "to": "ito", "type": "friend", "width": 1}, {"from": "mibu", "to": "yasaka", "type": "sibling", "width": 1}, {"from": "nishi", "to": "ex_nishi", "type": "ex", "width": 1}, {"from": "nishi", "to": "kagura", "type": "parent", "width": 1}, {"from": "ex_nishi", "to": "kagura", "type": "parent", "width": 1}, {"from": "yasaka", "to": "ex_shichijou", "type": "parent", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
